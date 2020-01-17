@@ -4,8 +4,6 @@ import javax.validation.Valid;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,16 +19,7 @@ import com.example.demo.exceptions.ResourceNotFoundException;
 import com.example.demo.service.PersonaService;
 
 @RestController
-@RefreshScope
 public class PersonaController {
-
-	@Value("${igv}")
-	private String igv;
-
-	@GetMapping("/igv")
-	public String getIgv() {
-		return "El igv actual es: " + this.igv;
-	}
 
 	@Autowired
 	private PersonaService personaService;
