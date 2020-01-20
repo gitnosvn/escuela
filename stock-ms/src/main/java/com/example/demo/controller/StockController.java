@@ -18,7 +18,7 @@ public class StockController {
 	@GetMapping("/stock/acumulado/{idProducto}")
 	public CantidadDTO obtenerCantidadStockProducto(@PathVariable("idProducto") Long idProducto) throws ValidacionException {
 		CantidadDTO response = new CantidadDTO();
-		response.setCantidad(666);
+		response.setCantidad(stockService.obtenerCantidadPorProducto(idProducto));
 		return response;
 	}
 

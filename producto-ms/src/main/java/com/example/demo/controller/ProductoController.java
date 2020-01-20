@@ -61,7 +61,7 @@ public class ProductoController {
 	public ProductoDTO obtenerProductoPorId(@PathVariable("id") Long id) throws ResourceNotFoundException {
 		ModelMapper mapper = new ModelMapper();
 		ProductoDTO producto = mapper.map(productoService.obtenerProductoPorId(id), ProductoDTO.class);
-		CantidadDTO cantidadDTO = getCantidad("stock-ms", id);
+		CantidadDTO cantidadDTO = getCantidad("almacen-ms", id);
 		producto.setCantidadStock(cantidadDTO.getCantidad());
 		return producto;
 	}
