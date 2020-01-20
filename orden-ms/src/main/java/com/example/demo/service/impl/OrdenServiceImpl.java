@@ -9,14 +9,12 @@ import com.example.demo.exceptions.ValidacionException;
 import com.example.demo.repository.OrdenRepository;
 import com.example.demo.service.OrdenService;
 
-@Transactional(readOnly = true)
 @Service
 public class OrdenServiceImpl implements OrdenService {
 
 	@Autowired
 	private OrdenRepository ordenRepository;
 
-	@Transactional(readOnly = false)
 	@Override
 	public Orden guardar(Orden orden) {
 		return ordenRepository.save(orden);

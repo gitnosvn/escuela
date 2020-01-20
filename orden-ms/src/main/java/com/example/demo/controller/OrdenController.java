@@ -5,9 +5,12 @@ import java.net.URI;
 import java.util.Date;
 import java.util.List;
 
+import javax.print.attribute.standard.Destination;
 import javax.validation.Valid;
 
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeMap;
+import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -18,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.dto.CantidadDTO;
 import com.example.demo.dto.OrdenDTO;
+import com.example.demo.dto.OrdenDetalleReducidoDTO;
 import com.example.demo.dto.OrdenReducidaDTO;
 import com.example.demo.dto.ProductoDTO;
 import com.example.demo.entidad.Orden;
@@ -61,10 +65,10 @@ public class OrdenController {
 
 	@PostMapping("/orden/guardar")
 	public OrdenDTO guardar(@Valid @RequestBody OrdenReducidaDTO ordenDTO) throws ValidacionException {
-		ModelMapper mapper = new ModelMapper();
+		ModelMapper modelMapper = new ModelMapper();
+		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 		BigDecimal total = new BigDecimal(0);
-		Orden orden = mapper.map(ordenDTO, Orden.class);
-
+		Orden orden = modelMapper.map(ordenDTO, Orden.class);
 		for (OrdenDetalle ordenDetalle : orden.getDetalle()) {
 			int cantidad = getCantidad("almacen-ms", ordenDetalle.getIdProducto()).getCantidad();
 			if (cantidad < ordenDetalle.getCantidad()) {
@@ -75,11 +79,9 @@ public class OrdenController {
 			BigDecimal precio = producto.getPrecio();
 			total = total.add(precio.multiply(new BigDecimal(cantidad)));
 			ordenDetalle.setPrecio(precio);
-			ordenDetalle.setOrden(orden);
 		}
-
 		orden.setTotal(total);
 		orden.setFecha(new Date());
-		return mapper.map(ordenService.guardar(orden), OrdenDTO.class);
+		return modelMapper.map(ordenService.guardar(orden), OrdenDTO.class);
 	}
 }

@@ -37,7 +37,7 @@ public class Orden {
 	@Column
 	private BigDecimal total;
 
-	@OneToMany(mappedBy = "orden", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@OneToMany(mappedBy = "orden", cascade = CascadeType.ALL)
 	private List<OrdenDetalle> detalle;
 
 }
