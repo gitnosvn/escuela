@@ -9,6 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CantidadDTO {
+public class OrdenDetalleReducidoDTO {
+	private Long idProducto;
 	private int cantidad;
 }
