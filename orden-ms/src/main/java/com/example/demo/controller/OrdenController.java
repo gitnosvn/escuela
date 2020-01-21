@@ -1,87 +1,68 @@
 package com.example.demo.controller;
 
 import java.math.BigDecimal;
-import java.net.URI;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
-import javax.print.attribute.standard.Destination;
 import javax.validation.Valid;
 
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeMap;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.ServiceInstance;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
-import com.example.demo.dto.CantidadDTO;
+import com.example.demo.dto.ActualizarStockDTO;
 import com.example.demo.dto.OrdenDTO;
 import com.example.demo.dto.OrdenDetalleReducidoDTO;
 import com.example.demo.dto.OrdenReducidaDTO;
 import com.example.demo.dto.ProductoDTO;
 import com.example.demo.entidad.Orden;
 import com.example.demo.entidad.OrdenDetalle;
+import com.example.demo.exceptions.ResourceNotFoundException;
 import com.example.demo.exceptions.ValidacionException;
+import com.example.demo.feign.AlmacenClient;
+import com.example.demo.feign.ProductoClient;
 import com.example.demo.service.OrdenService;
 
 @RestController
 public class OrdenController {
 	@Autowired
-	private DiscoveryClient client;
-
-	@Autowired
 	private OrdenService ordenService;
-
-	public CantidadDTO getCantidad(String service, Long idProducto) {
-		List<ServiceInstance> list = client.getInstances(service);
-		if (list != null && list.size() > 0) {
-			int rand = (int) Math.round(Math.random() * 10) % list.size();
-			URI uri = list.get(rand).getUri();
-			if (uri != null) {
-				return (new RestTemplate()).getForObject(uri.toString() + "/stock/acumulado/{idProducto}",
-						CantidadDTO.class, idProducto);
-			}
-		}
-		return null;
-	}
-
-	public ProductoDTO getProducto(String service, Long idProducto) {
-		List<ServiceInstance> list = client.getInstances(service);
-		if (list != null && list.size() > 0) {
-			int rand = (int) Math.round(Math.random() * 10) % list.size();
-			URI uri = list.get(rand).getUri();
-			if (uri != null) {
-				return (new RestTemplate()).getForObject(uri.toString() + "/productos/{id}", ProductoDTO.class,
-						idProducto);
-			}
-		}
-		return null;
-	}
+	@Autowired
+	private ProductoClient productoClient;
+	@Autowired
+	private AlmacenClient almacenClient;
 
 	@PostMapping("/orden/guardar")
-	public OrdenDTO guardar(@Valid @RequestBody OrdenReducidaDTO ordenDTO) throws ValidacionException {
+	public OrdenDTO guardar(@Valid @RequestBody OrdenReducidaDTO ordenDTO)
+			throws ValidacionException, ResourceNotFoundException {
 		ModelMapper modelMapper = new ModelMapper();
 		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 		BigDecimal total = new BigDecimal(0);
 		Orden orden = modelMapper.map(ordenDTO, Orden.class);
 		for (OrdenDetalle ordenDetalle : orden.getDetalle()) {
-			int cantidad = getCantidad("almacen-ms", ordenDetalle.getIdProducto()).getCantidad();
+			int cantidad = almacenClient.obtenerCantidadStockProducto(ordenDetalle.getIdProducto()).getCantidad();
 			if (cantidad < ordenDetalle.getCantidad()) {
 				throw new ValidacionException("Cantidad sobrepasa el stock actual");
 			}
 
-			ProductoDTO producto = getProducto("producto-ms", ordenDetalle.getIdProducto());
+			ProductoDTO producto = productoClient.obtenerProductoPorId(ordenDetalle.getIdProducto());
 			BigDecimal precio = producto.getPrecio();
 			total = total.add(precio.multiply(new BigDecimal(cantidad)));
 			ordenDetalle.setPrecio(precio);
 		}
 		orden.setTotal(total);
 		orden.setFecha(new Date());
-		return modelMapper.map(ordenService.guardar(orden), OrdenDTO.class);
+		Orden guardado = ordenService.guardar(orden);
+		ActualizarStockDTO actualizarStockDTO = new ActualizarStockDTO();
+		actualizarStockDTO.setDetalle(new ArrayList<OrdenDetalleReducidoDTO>());
+		guardado.getDetalle().forEach(detalle -> {
+			OrdenDetalleReducidoDTO d = new OrdenDetalleReducidoDTO(detalle.getIdProducto(), detalle.getCantidad());
+			actualizarStockDTO.getDetalle().add(d);
+		});
+		almacenClient.actualizarStock(actualizarStockDTO);
+		return modelMapper.map(guardado, OrdenDTO.class);
 	}
 }
